@@ -25,6 +25,9 @@
     <Filter Include="Source Files">
       <UniqueIdentifier>{6229835e-e300-4577-84e0-b69bb8fc44b4}</UniqueIdentifier>
     </Filter>
+    <Filter Include="libs\recast">
+      <UniqueIdentifier>{8df0e35e-9dbf-4238-ba53-3bbc193009b5}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\common\cmdlib.h">
@@ -80,6 +83,18 @@
     </ClInclude>
     <ClInclude Include="..\common\ddslib.h">
       <Filter>common</Filter>
+    </ClInclude>
+    <ClInclude Include="game_tremulous.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\libs\recast\Recast.h">
+      <Filter>libs\recast</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\libs\recast\RecastAlloc.h">
+      <Filter>libs\recast</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\libs\recast\RecastAssert.h">
+      <Filter>libs\recast</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -481,6 +496,39 @@
     </ClCompile>
     <ClCompile Include="..\common\ddslib.c">
       <Filter>common</Filter>
+    </ClCompile>
+    <ClCompile Include="nav.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\libs\recast\Recast.cpp">
+      <Filter>libs\recast</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\libs\recast\RecastAlloc.cpp">
+      <Filter>libs\recast</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\libs\recast\RecastArea.cpp">
+      <Filter>libs\recast</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\libs\recast\RecastContour.cpp">
+      <Filter>libs\recast</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\libs\recast\RecastFilter.cpp">
+      <Filter>libs\recast</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\libs\recast\RecastLayers.cpp">
+      <Filter>libs\recast</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\libs\recast\RecastMesh.cpp">
+      <Filter>libs\recast</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\libs\recast\RecastMeshDetail.cpp">
+      <Filter>libs\recast</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\libs\recast\RecastRasterization.cpp">
+      <Filter>libs\recast</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\libs\recast\RecastRegion.cpp">
+      <Filter>libs\recast</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

@@ -1237,10 +1237,10 @@ const classAttributes_t *BG_ClassByName( const char *name )
 BG_Class
 ==============
 */
-const classAttributes_t *BG_Class( class_t class )
+const classAttributes_t *BG_Class( class_t classt )
 {
-  return ( class >= PCL_NONE && class < PCL_NUM_CLASSES ) ?
-    &bg_classList[ class ] : &nullClass;
+  return ( classt >= PCL_NONE && classt < PCL_NUM_CLASSES ) ?
+    &bg_classList[ classt ] : &nullClass;
 }
 
 /*
@@ -1248,10 +1248,10 @@ const classAttributes_t *BG_Class( class_t class )
 BG_ClassAllowedInStage
 ==============
 */
-qboolean BG_ClassAllowedInStage( class_t class,
+qboolean BG_ClassAllowedInStage( class_t classt,
                                  stage_t stage )
 {
-  int stages = BG_Class( class )->stages;
+  int stages = BG_Class( classt )->stages;
 
   return stages & ( 1 << stage );
 }
@@ -1263,9 +1263,9 @@ static classConfig_t bg_classConfigList[ PCL_NUM_CLASSES ];
 BG_ClassConfig
 ==============
 */
-classConfig_t *BG_ClassConfig( class_t class )
+classConfig_t *BG_ClassConfig( class_t classt )
 {
-  return &bg_classConfigList[ class ];
+  return &bg_classConfigList[ classt ];
 }
 
 /*
@@ -1273,11 +1273,11 @@ classConfig_t *BG_ClassConfig( class_t class )
 BG_ClassBoundingBox
 ==============
 */
-void BG_ClassBoundingBox( class_t class,
+void BG_ClassBoundingBox( class_t classt,
                           vec3_t mins, vec3_t maxs,
                           vec3_t cmaxs, vec3_t dmins, vec3_t dmaxs )
 {
-  classConfig_t *classConfig = BG_ClassConfig( class );
+  classConfig_t *classConfig = BG_ClassConfig( classt );
 
   if( mins != NULL )
     VectorCopy( classConfig->mins, mins );
@@ -1300,9 +1300,9 @@ void BG_ClassBoundingBox( class_t class,
 BG_ClassHasAbility
 ==============
 */
-qboolean BG_ClassHasAbility( class_t class, int ability )
+qboolean BG_ClassHasAbility( class_t classt, int ability )
 {
-  int abilities = BG_Class( class )->abilities;
+  int abilities = BG_Class( classt )->abilities;
 
   return abilities & ability;
 }
@@ -1361,13 +1361,13 @@ int BG_ClassCanEvolveFromTo( class_t fclass,
 BG_AlienCanEvolve
 ==============
 */
-qboolean BG_AlienCanEvolve( class_t class, int credits, int stage )
+qboolean BG_AlienCanEvolve( class_t classt, int credits, int stage )
 {
   int i, j, tclass;
 
   for( i = 0; i < bg_numClasses; i++ )
   {
-    if( bg_classList[ i ].number != class )
+    if( bg_classList[ i ].number != classt )
       continue;
 
     for( j = 0; j < 3; j++ )
@@ -3793,14 +3793,14 @@ qboolean BG_UpgradeIsAllowed( upgrade_t upgrade )
 BG_ClassIsAllowed
 ============
 */
-qboolean BG_ClassIsAllowed( class_t class )
+qboolean BG_ClassIsAllowed( class_t classt )
 {
   int i;
 
   for( i = 0; i < PCL_NUM_CLASSES &&
       bg_disabledGameElements.classes[ i ] != PCL_NONE; i++ )
   {
-    if( bg_disabledGameElements.classes[ i ] == class )
+    if( bg_disabledGameElements.classes[ i ] == classt )
       return qfalse;
   }
 

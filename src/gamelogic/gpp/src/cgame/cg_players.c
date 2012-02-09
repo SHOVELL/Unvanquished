@@ -2948,6 +2948,7 @@ void CG_Player( centity_t *cent )
 		else
 			VectorCopy(cent->currentState.angles2, surfNormal);
 
+        //FIXME: playerMins and playerMaxs are uninitialized...
 		VectorCopy(playerMins, mins);
 		VectorCopy(playerMaxs, maxs);
 

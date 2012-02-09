@@ -1935,6 +1935,10 @@ int main(int argc, char **argv)
 	else if(!strcmp(argv[1], "-vis"))
 		r = VisMain(argc - 1, argv + 1);
 
+    /* nav */
+    else if(!strcmp(argv[1], "-nav"))
+		r = NavMain(argc - 2, argv + 2);
+
 	/* light */
 	else if(!strcmp(argv[1], "-light"))
 		r = LightMain(argc - 1, argv + 1);

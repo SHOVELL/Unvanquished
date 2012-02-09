@@ -487,7 +487,7 @@ void LoadPCX(const char *filename, byte ** pic, byte ** palette, int *width, int
 	pcx_t          *pcx;
 	int             x, y, lsize;
 	int             len;
-	int             dataByte, runLength;
+	int             dataByte, runLength = 0;
 	byte           *out, *pix;
 
 
@@ -1510,7 +1510,7 @@ void LoadPNGBuffer(byte * data, byte ** pic, int *width, int *height)
 	png_structp     png;
 	png_bytep      *row_pointers;
 	byte           *out;
-	int             size;
+	//int             size;
 	byte            alphaByte = 255;
 
 	// load png

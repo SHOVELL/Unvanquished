@@ -2906,7 +2906,7 @@ static void CG_DrawStack( rectDef_t *rect, vec4_t color, float fill,
   // if the scaled length of each segment is too small, do a single bar
   if( each * ( vertical ? cgs.screenYScale : cgs.screenXScale ) < 4.f )
   {
-    float loff;
+    float loff = 0;
     switch( lalign )
     {
       case LALIGN_TOPLEFT:

@@ -22,7 +22,9 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 */
 
 // g_local.h -- local definitions for game module
-
+#ifdef __cplusplus
+extern "C" {
+#endif
 #include "../../../../engine/qcommon/q_shared.h"
 #include "bg_public.h"
 #include "../../../../engine/server/g_api.h"
@@ -75,6 +77,152 @@ typedef enum
 #define SP_PODIUM_MODEL   "models/mapobjects/podium/podium4.md3"
 
 //============================================================================
+#define MAX_BOT_BUILDINGS 300
+
+typedef enum{  
+  BOT_IDLE,  
+  BOT_ATTACK,  
+  BOT_REPAIR,  
+  BOT_AUTO
+} botCommand_t;
+
+typedef enum {	
+  TRAIT_LEADER = 1,	
+  TRAIT_FOLLOWER = 2,	
+  TRAIT_LONER = 3
+} botTrait_t;
+
+typedef enum {    
+  BOT_MODUS_ATTACK,	
+  BOT_MODUS_DEFEND,	
+  BOT_MODUS_BUILD,	
+  BOT_MODUS_IDLE
+} botModus_t;
+
+typedef enum {	
+  BOT_TASK_FIGHT,	
+  BOT_TASK_BUILD,	
+  BOT_TASK_BUY,	
+  BOT_TASK_GROUP,	
+  BOT_TASK_HEAL,	
+  BOT_TASK_REPAIR,	
+  BOT_TASK_RETREAT,	
+  BOT_TASK_RUSH,	
+  BOT_TASK_ROAM,	
+  BOT_TASK_NONE,
+} botTask_t;
+
+typedef enum {	
+  BOT_TASK_COMPLETE = 2,	
+  BOT_TASK_INPROGRESS = 4,	
+  BOT_TASK_NOTARGET = 8
+} botTaskFlags_t;
+
+typedef struct {	
+  gentity_t *ent;	
+  float distance;
+} botEntityAndDistance_t;
+
+typedef struct {	
+  botEntityAndDistance_t egg;	
+  botEntityAndDistance_t overmind;	
+  botEntityAndDistance_t barricade;	
+  botEntityAndDistance_t acidtube;	
+  botEntityAndDistance_t trapper;	
+  botEntityAndDistance_t booster;	
+  botEntityAndDistance_t hive;	
+  botEntityAndDistance_t telenode;	
+  botEntityAndDistance_t turret;	
+  botEntityAndDistance_t tesla;	
+  botEntityAndDistance_t armoury;	
+  botEntityAndDistance_t dcc;	
+  botEntityAndDistance_t medistation;
+  botEntityAndDistance_t reactor;	
+  botEntityAndDistance_t repeater;
+} botClosestBuildings_t;
+
+typedef struct{  
+  buildable_t type;  
+  vec3_t origin;
+} botBuilding_t;
+
+typedef struct{	
+  botBuilding_t buildings[MAX_BOT_BUILDINGS];    
+  int numBuildings;
+} botBuildLayout_t;
+
+typedef struct{    
+  gentity_t *ent;    
+  vec3_t coord;	
+  qboolean inuse;
+}botTarget_t;
+
+typedef struct{    
+  int level;   
+  float aimSlowness;    
+  float aimShake;
+} botSkill_t;
+
+typedef enum{	
+  STATUS_FAILED	= 0x01,	
+  STATUS_NOPOLYNEARSELF	= 0x02,	
+  STATUS_NOPOLYNEARTARGET =	0x04,
+  STATUS_SUCCEED = 0x08,	
+  STATUS_PARTIAL = 0x10
+} botRouteStatusFlags;
+
+typedef struct{	
+  //user specified command for the bot    
+  botCommand_t command;	
+
+  //when the enemy was last seen    
+  int enemyLastSeen;	
+  int timeFoundEnemy;	
+
+  //team the bot is on when added    
+  team_t botTeam;	
+
+  //item a human bot spawns with (1 == rifle, 2 == ckit)    
+  int spawnItem;   
+
+  //targets    
+  botTarget_t targetNode;    
+  botTarget_t goal;	
+
+  
+  //pathfinding stuff	
+  vec3_t routeToTarget[1000];    
+  int numCorners;	
+  int timeFoundNode;	
+  int timeFoundRoute;	
+  int targetNodeID;   
+  qboolean followingRoute;	
+
+  //skill structure    
+  botSkill_t botSkill;	
+  botModus_t modus;	
+  botTask_t task;	
+  botEntityAndDistance_t bestEnemy;	
+  botEntityAndDistance_t closestDamagedBuilding;	
+  botClosestBuildings_t closestBuildings;
+
+  //tells if we need a new goal	
+  qboolean needNewGoal;	
+
+  //the trait the bot has	
+  botTrait_t trait;	
+
+  //how many bots are in this bot's group	
+  int numGroup;	
+
+  //this bot's leader (NULL if no leader)	
+  gentity_t *leader;	
+
+  //for bot builders	
+  int currentBuilding;	
+  int maxBuildings;
+  botBuildLayout_t layout;
+} botMemory_t;
 
 struct gentity_s
 {
@@ -245,6 +393,7 @@ struct gentity_s
 
   int               buildPointZone;                 // index for zone
   int               usesBuildPointZone;             // does it use a zone?
+  botMemory_t *botMind; //bot mind for bots
 };
 
 typedef enum
@@ -686,6 +835,7 @@ typedef struct
   buildLog_t        buildLog[ MAX_BUILDLOG ];
   int               buildId;
   int               numBuildLogs;
+  botBuildLayout_t botBuildLayout;
 } level_locals_t;
 
 #define CMD_CHEAT         0x0001
@@ -717,7 +867,16 @@ void      G_SpawnEntitiesFromString( void );
 char      *G_NewString( const char *string );
 
 //
-// g_cmds.c
+// bot.cpp
+//
+qboolean G_BotAdd( char *name, team_t team, int skill );
+void G_BotDel( int clientNum );
+void G_BotCmd( gentity_t *master, int clientNum, char *command);
+void G_BotThink(gentity_t *self);
+void G_BotSpectatorThink( gentity_t *self );
+void G_BotIntermissionThink( gclient_t *client );
+void G_BotAssignGroups(void);
+void G_BotLoadBuildLayout();//// g_cmds.c
 //
 
 #define DECOLOR_OFF '\16'
@@ -785,15 +944,15 @@ typedef enum
 gentity_t         *G_CheckSpawnPoint( int spawnNum, const vec3_t origin,
                                       const vec3_t normal, buildable_t spawn,
                                       vec3_t spawnOrigin );
-
+itemBuildError_t G_SufficientBPAvailable( buildable_t     buildable, vec3_t          origin );
 buildable_t       G_IsPowered( vec3_t origin );
 qboolean          G_IsDCCBuilt( void );
 int               G_FindDCC( gentity_t *self );
 gentity_t         *G_Reactor( void );
 gentity_t         *G_Overmind( void );
 qboolean          G_FindCreep( gentity_t *self );
-
-void              G_BuildableThink( gentity_t *ent, int msec );
+gentity_t *G_Build( gentity_t *builder, buildable_t buildable,
+    const vec3_t origin, const vec3_t normal, const vec3_t angles );void              G_BuildableThink( gentity_t *ent, int msec );
 qboolean          G_BuildableRange( vec3_t origin, float r, buildable_t buildable );
 void              G_ClearDeconMarks( void );
 itemBuildError_t  G_CanBuild( gentity_t *ent, buildable_t buildable, int distance, vec3_t origin, vec3_t normal );
@@ -806,7 +965,7 @@ void              G_LayoutSave( char *name );
 int               G_LayoutList( const char *map, char *list, int len );
 void              G_LayoutSelect( void );
 void              G_LayoutLoad( void );
-void              G_BaseSelfDestruct( team_t team );
+void			  G_NavMeshInit( void );void			  G_NavMeshCleanup( void );void              G_BaseSelfDestruct( team_t team );
 int               G_NextQueueTime( int queuedBP, int totalBP, int queueBaseRate );
 void              G_QueueBuildPoints( gentity_t *self );
 int               G_GetBuildPoints( const vec3_t pos, team_t team );
@@ -822,7 +981,6 @@ void              G_BuildLogAuto( gentity_t *actor, gentity_t *buildable, buildF
 void              G_BuildLogRevert( int id );
 void              G_RemoveRangeMarkerFrom( gentity_t *self );
 void              G_UpdateBuildableRangeMarkers( void );
-
 //
 // g_utils.c
 //
@@ -1194,6 +1352,42 @@ extern  vmCvar_t  g_allowTeamOverlay;
 
 extern  vmCvar_t  g_censorship;
 
+// <bot stuff>
+// bot buy cvars
+extern vmCvar_t g_bot_buy;
+extern vmCvar_t g_bot_rifle;
+extern vmCvar_t g_bot_painsaw;
+extern vmCvar_t g_bot_shotgun;
+extern vmCvar_t g_bot_lasgun;
+extern vmCvar_t g_bot_mdriver;
+extern vmCvar_t g_bot_chaingun;
+extern vmCvar_t g_bot_prifle;
+extern vmCvar_t g_bot_flamer;
+extern vmCvar_t g_bot_lcannon;
+// bot evolution cvars
+extern vmCvar_t g_bot_evolve;
+extern vmCvar_t g_bot_level1;
+extern vmCvar_t g_bot_level1upg;
+extern vmCvar_t g_bot_level2;
+extern vmCvar_t g_bot_level2upg;
+extern vmCvar_t g_bot_level3;
+extern vmCvar_t g_bot_level3upg;
+extern vmCvar_t g_bot_level4;
+//misc bot cvars
+extern vmCvar_t g_bot_attackStruct;
+extern vmCvar_t g_bot_roam;
+extern vmCvar_t g_bot_rush;
+extern vmCvar_t g_bot_build;
+extern vmCvar_t g_bot_repair;
+extern vmCvar_t g_bot_retreat;
+//extern vmCvar_t g_bot_camp;
+extern vmCvar_t g_bot_infinite_funds;
+extern vmCvar_t g_bot_survival;
+extern vmCvar_t g_bot_wave_interval;
+extern vmCvar_t g_bot_numInGroup;
+extern vmCvar_t g_bot_persistent;
+extern vmCvar_t g_bot_buildLayout;
+//</bot stuff>
 void 			trap_Print(const char *fmt);
 void 			trap_Error(const char *fmt);
 int 			trap_Milliseconds(void);
@@ -1423,3 +1617,6 @@ int				trap_SQL_FieldCount( int queryid );
 void			trap_SQL_CleanString( const char *in, char *out, int len );
 #endif
 int				trap_RSA_GenerateMessage( const char *public_key, char *cleartext, char *encrypted );
+#ifdef __cplusplus
+}
+#endif

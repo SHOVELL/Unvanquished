@@ -1051,7 +1051,6 @@ void CG_RangeMarker( centity_t *cent )
   int rmType;
   float range;
   vec3_t rgb;
-
   if( CG_GetRangeMarkerPreferences( &drawS, &drawI, &drawF, &so, &lo, &th ) &&
       CG_GetBuildableRangeMarkerProperties( cent->currentState.modelindex, &rmType, &range, rgb ) )
   {

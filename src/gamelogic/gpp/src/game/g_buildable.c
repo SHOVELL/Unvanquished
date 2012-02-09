@@ -3070,7 +3070,7 @@ Determine if enough build points can be released for the buildable
 and list the buildables that must be destroyed if this is the case
 ===============
 */
-static itemBuildError_t G_SufficientBPAvailable( buildable_t     buildable,
+itemBuildError_t G_SufficientBPAvailable( buildable_t     buildable,
                                                  vec3_t          origin )
 {
   int               i;
@@ -3560,7 +3560,7 @@ G_Build
 Spawns a buildable
 ================
 */
-static gentity_t *G_Build( gentity_t *builder, buildable_t buildable,
+gentity_t *G_Build( gentity_t *builder, buildable_t buildable,
     const vec3_t origin, const vec3_t normal, const vec3_t angles )
 {
   gentity_t *built;
@@ -4477,7 +4477,7 @@ void G_UpdateBuildableRangeMarkers( void )
       if( client->pers.connected != CON_CONNECTED )
         continue;
 
-      team = client->pers.teamSelection;
+      team = client->ps.stats[STAT_TEAM];
       if( team != TEAM_NONE )
       {
         weaponDisplays = ( BG_InventoryContainsWeapon( WP_HBUILD, client->ps.stats ) ||
@@ -4485,7 +4485,7 @@ void G_UpdateBuildableRangeMarkers( void )
       }
       wantsToSee = !!( client->pers.buildableRangeMarkerMask & ( 1 << bType ) );
 
-      if( ( team == TEAM_NONE || ( team == bTeam && weaponDisplays ) ) && wantsToSee )
+      if( ( team == bTeam && weaponDisplays )  && wantsToSee )
       {
         if( i >= 32 )
           e->rangeMarker->r.hiMask |= 1 << ( i - 32 );

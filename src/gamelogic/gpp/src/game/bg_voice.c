@@ -188,9 +188,9 @@ static qboolean BG_VoiceParseTrack( int handle, voiceTrack_t *voiceTrack )
       while( foundToken && token.type == TT_NUMBER )
       {
         found = qtrue;
-        if( voiceTrack->class < 0 )
-          voiceTrack->class = 0;
-        voiceTrack->class |= ( 1 << token.intvalue );
+        if( voiceTrack->classt < 0 )
+          voiceTrack->classt = 0;
+        voiceTrack->classt |= ( 1 << token.intvalue );
         foundToken = trap_Parse_ReadToken( handle, &token );
       }
       if( !found )
@@ -333,7 +333,7 @@ static voiceTrack_t *BG_VoiceParseCommand( int handle )
     }
 
     voiceTracks->team = -1;
-    voiceTracks->class = -1;
+    voiceTracks->classt = -1;
     voiceTracks->weapon = -1;
     voiceTracks->enthusiasm = 0;
     voiceTracks->text = NULL;
@@ -478,7 +478,7 @@ void BG_PrintVoices( voice_t *voices, int debugLevel )
         if( debugLevel > 2 )
         {
           Com_Printf( "    team -> %d\n", voiceTrack->team );
-          Com_Printf( "    class -> %d\n", voiceTrack->class );
+          Com_Printf( "    class -> %d\n", voiceTrack->classt );
           Com_Printf( "    weapon -> %d\n", voiceTrack->weapon );
           Com_Printf( "    enthusiasm -> %d\n", voiceTrack->enthusiasm );
 #ifdef CGAME
@@ -589,7 +589,7 @@ BG_VoiceTrackFind
 ============
 */
 voiceTrack_t *BG_VoiceTrackFind( voiceTrack_t *head, team_t team,
-                                 class_t class, weapon_t weapon,
+                                 class_t classt, weapon_t weapon,
                                  int enthusiasm, int *trackNum )
 {
   voiceTrack_t *vt = head;
@@ -603,7 +603,7 @@ voiceTrack_t *BG_VoiceTrackFind( voiceTrack_t *head, team_t team,
   while( vt )
   {
     if( ( vt->team >= 0 && !( vt->team  & ( 1 << team ) ) ) || 
-        ( vt->class >= 0 && !( vt->class & ( 1 << class ) ) ) || 
+        ( vt->classt >= 0 && !( vt->classt & ( 1 << classt ) ) ) || 
         ( vt->weapon >= 0 && !( vt->weapon & ( 1 << weapon ) ) ) ||
         vt->enthusiasm > enthusiasm )
     {
@@ -633,7 +633,7 @@ voiceTrack_t *BG_VoiceTrackFind( voiceTrack_t *head, team_t team,
   {
     j++;
     if( ( vt->team >= 0 && !( vt->team  & ( 1 << team ) ) ) || 
-        ( vt->class >= 0 && !( vt->class & ( 1 << class ) ) ) || 
+        ( vt->classt >= 0 && !( vt->classt & ( 1 << classt ) ) ) || 
         ( vt->weapon >= 0 && !( vt->weapon & ( 1 << weapon ) ) ) ||
         vt->enthusiasm != highestMatch )
     {

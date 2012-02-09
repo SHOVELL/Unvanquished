@@ -1081,7 +1081,7 @@ char *ClientConnect( int clientNum, qboolean firstTime )
   }
 
    // check for admin ban
-  if( G_admin_ban_check( ent, reason, sizeof( reason ) ) )
+  if( G_admin_ban_check( ent, reason, sizeof( reason ) ) && !(ent->r.svFlags & SVF_BOT) )
   {
     return va( "%s", reason );
   }
@@ -1090,22 +1090,21 @@ char *ClientConnect( int clientNum, qboolean firstTime )
   value = Info_ValueForKey( userinfo, "password" );
 
   if( g_password.string[ 0 ] && Q_stricmp( g_password.string, "none" ) &&
-      strcmp( g_password.string, value ) != 0 )
+      strcmp( g_password.string, value ) != 0 && !(ent->r.svFlags & SVF_BOT))
     return "Invalid password";
 
   // add guid to session so we don't have to keep parsing userinfo everywhere
   for( i = 0; i < sizeof( client->pers.guid ) - 1 &&
               isxdigit( client->pers.guid[ i ] ); i++ );
 
-  if( i < sizeof( client->pers.guid ) - 1 )
+  if( i < sizeof( client->pers.guid ) - 1 && !(ent->r.svFlags & SVF_BOT))
     return "Invalid GUID";
 
   for( i = 0; i < level.maxclients; i++ )
   {
     if( level.clients[ i ].pers.connected == CON_DISCONNECTED )
       continue;
-
-    if( !Q_stricmp( client->pers.guid, level.clients[ i ].pers.guid ) )
+    if( !Q_stricmp( client->pers.guid, level.clients[ i ].pers.guid )  && !(ent->r.svFlags & SVF_BOT))
     {
       if( !G_ClientIsLagging( level.clients + i ) )
       {

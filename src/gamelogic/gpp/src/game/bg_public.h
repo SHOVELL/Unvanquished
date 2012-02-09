@@ -222,7 +222,7 @@ typedef enum
   STAT_ACTIVEITEMS,
   STAT_WEAPON,    // current primary weapon
   STAT_MAX_HEALTH,// health / armor limit, changable by handicap
-  STAT_CLASS,     // player class (for aliens AND humans)
+  STAT_CLASS,     // player classt (for aliens AND humans)
   STAT_TEAM,      // player team
   STAT_STAMINA,   // stamina (human only)
   STAT_STATE,     // client states e.g. wall climbing
@@ -913,7 +913,7 @@ typedef enum
 
 //---------------------------------------------------------
 
-// player class record
+// player classt record
 typedef struct
 {
   class_t   number;
@@ -1139,20 +1139,20 @@ void                        BG_BuildableBoundingBox( buildable_t buildable,
 void                        BG_InitBuildableConfigs( void );
 
 const classAttributes_t     *BG_ClassByName( const char *name );
-const classAttributes_t     *BG_Class( class_t class );
-qboolean                    BG_ClassAllowedInStage( class_t class,
+const classAttributes_t     *BG_Class( class_t classt );
+qboolean                    BG_ClassAllowedInStage( class_t classt,
                                                     stage_t stage );
 
-classConfig_t               *BG_ClassConfig( class_t class );
+classConfig_t               *BG_ClassConfig( class_t classt );
 
-void                        BG_ClassBoundingBox( class_t class, vec3_t mins,
+void                        BG_ClassBoundingBox( class_t classt, vec3_t mins,
                                                  vec3_t maxs, vec3_t cmaxs,
                                                  vec3_t dmins, vec3_t dmaxs );
-qboolean                    BG_ClassHasAbility( class_t class, int ability );
+qboolean                    BG_ClassHasAbility( class_t classt, int ability );
 int                         BG_ClassCanEvolveFromTo( class_t fclass,
                                                      class_t tclass,
                                                      int credits, int alienStage, int num );
-qboolean                    BG_AlienCanEvolve( class_t class, int credits, int alienStage );
+qboolean                    BG_AlienCanEvolve( class_t classt, int credits, int alienStage );
 
 void                        BG_InitClassConfigs( void );
 
@@ -1208,7 +1208,7 @@ void BG_ParseCSVBuildableList( const char *string, buildable_t *buildables, int 
 void BG_InitAllowedGameElements( void );
 qboolean BG_WeaponIsAllowed( weapon_t weapon );
 qboolean BG_UpgradeIsAllowed( upgrade_t upgrade );
-qboolean BG_ClassIsAllowed( class_t class );
+qboolean BG_ClassIsAllowed( class_t classt );
 qboolean BG_BuildableIsAllowed( buildable_t buildable );
 weapon_t BG_PrimaryWeapon( int stats[ ] );
 
@@ -1241,7 +1241,7 @@ typedef struct voiceTrack_s
   char                   *text;
   int                    enthusiasm;
   int                    team;
-  int                    class;
+  int                    classt;
   int                    weapon;
   struct voiceTrack_s    *next;
 } voiceTrack_t;
@@ -1269,7 +1269,7 @@ voiceCmd_t *BG_VoiceCmdFind( voiceCmd_t *head, char *name, int *cmdNum );
 voiceCmd_t *BG_VoiceCmdByNum( voiceCmd_t *head, int num);
 voiceTrack_t *BG_VoiceTrackByNum( voiceTrack_t *head, int num );
 voiceTrack_t *BG_VoiceTrackFind( voiceTrack_t *head, team_t team,
-                                 class_t class, weapon_t weapon,
+                                 class_t classt, weapon_t weapon,
                                  int enthusiasm, int *trackNum );
 
 int BG_LoadEmoticons( emoticon_t *emoticons, int num );

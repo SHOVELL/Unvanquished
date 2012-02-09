@@ -74,7 +74,10 @@ g_admin_cmd_t g_admin_cmds[ ] =
       "specified",
       "[^3name|slot#|IP(/mask)^7] (^5duration^7) (^5reason^7)"
     },
-
+    {"bot", G_admin_bot, qfalse, "bot",
+		"Add/Delete bots",
+		"[^5add|del^7] [^5name^7] [^5aliens/humans^7] (^5skill^7)"
+	},
     {"builder", G_admin_builder, qtrue, "builder",
       "show who built a structure",
       ""
@@ -1051,12 +1054,12 @@ static int cmplevel( const void *a, const void *b )
 
 void G_admin_pubkey( void )
 {
-  int i;
   g_admin_admin_t *highest = NULL, *a = NULL;
 
   // Uncomment this if your server lags (shouldn't happen unless you are on a *very* old computer)
   // Will only regenrate messages when there are no active client (When they are all loading the map)
 #if 0
+  int i;
   for( i = 0; i < level.maxclients; i++ )
   {
     if( g_entities[ i ].client && g_entities[ i ].client->pers.connected == CON_CONNECTED )
@@ -2674,6 +2677,10 @@ qboolean G_admin_rename( gentity_t *ent )
     return qfalse;
   }
   victim = &g_entities[ pid ];
+  if((victim->r.svFlags & SVF_BOT) && !Q_stricmp(newname, "all")) {
+	  ADMP("You can't rename bots to that\n");
+	  return qfalse;
+  }
   if( !admin_higher( ent, victim ) )
   {
     ADMP( "^3rename: ^7sorry, but your intended victim has a higher admin"
@@ -3366,3 +3373,87 @@ void G_admin_cleanup( void )
   g_admin_commands = NULL;
   BG_DefragmentMemory( );
 }
+qboolean G_admin_bot( gentity_t *ent ) {
+	int min_args = 3;
+	char arg1[MAX_TOKEN_CHARS];
+	char name[MAX_TOKEN_CHARS];
+	char team[MAX_TOKEN_CHARS];
+	char skill[MAX_TOKEN_CHARS];
+	char err[MAX_STRING_CHARS];
+	int skill_int;
+	int i;
+	if(trap_Argc() < min_args) {
+		ADMP( "^3bot: ^7usage: bot [^5add|del^7] [^5name^7] (5aliens/humans^7) (^5skill^7)\n" );
+		return qfalse;
+	}
+	trap_Argv(1, arg1, sizeof(arg1));
+	trap_Argv(2, name, sizeof(name));
+
+	if(!Q_stricmp(arg1, "add")) {
+		min_args++; //now we also need a team name
+		if(!Q_stricmp(name, "all")) {
+			ADMP( "bots can't have that name\n");
+			return qfalse;
+		}
+		if(trap_Argc() < min_args) {
+			ADMP( "^3bot: ^7usage: bot [^5add|del^7] [^5name^7] (5aliens/humans^7) (^5skill^7)\n" );
+			return qfalse;
+		}
+		trap_Argv(3, team, sizeof(team));
+
+		//skill level checks
+		min_args++;
+		if(trap_Argc() < min_args) {
+			skill_int = 5; //no skill arg
+		} else {
+			trap_Argv(4, skill, sizeof(skill));
+			skill_int = atoi(skill);
+			if(skill_int < 1) {
+				skill_int = 1; //skill arg too small, reset to 1
+			} else if(skill_int > 10) {
+				skill_int = 10; //skill arg too bit, reset to 10
+			}
+		}
+		//choose team
+		if(!Q_stricmp(team, "humans") || !Q_stricmp(team, "h")) {
+
+			if(!G_BotAdd(name,TEAM_HUMANS,skill_int)) {
+				ADMP("Can't add a bot\n");
+				return qfalse;
+			}
+
+		} else if(!Q_stricmp(team, "aliens") || !Q_stricmp(team, "a")) {
+
+			if(!G_BotAdd(name,TEAM_ALIENS,skill_int)) {
+				ADMP("Can't add a bot\n");
+				return qfalse;
+			}
+
+		} else {
+			ADMP( "Invalid team name\n");
+			ADMP( "^3bot: ^7usage: bot [^5add|del^7] [^5name^7] (5aliens/humans^7) (^5skill^7)\n" );
+			return qfalse;
+		}
+	} else if(!Q_stricmp(arg1, "del")) {
+		int clientNum = G_ClientNumberFromString(name,err, sizeof(err));
+		if(!Q_stricmp(name, "all")) {
+			for(i=0;i<MAX_CLIENTS;i++) {
+				if(g_entities[i].r.svFlags & SVF_BOT)
+					G_BotDel(i);
+			}
+			return qtrue;
+		}
+		
+		if(clientNum == -1) { //something went wrong when finding the client Number
+			ADMP(err);
+			return qfalse;
+		}
+		G_BotDel(clientNum); //delete the bot
+	} else {
+		ADMP("Invalid command\n");
+		ADMP( "^3bot: ^7usage: bot [^5add|del^7] [^5name^7] (5aliens/humans^7) (^5skill^7)\n" );
+		return qfalse;
+	}
+	return qtrue;
+}
+
