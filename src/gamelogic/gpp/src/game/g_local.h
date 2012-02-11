@@ -28,7 +28,6 @@ extern "C" {
 #include "../../../../engine/qcommon/q_shared.h"
 #include "bg_public.h"
 #include "../../../../engine/server/g_api.h"
-
 typedef struct gentity_s gentity_t;
 typedef struct gclient_s gclient_t;
 
@@ -222,6 +221,19 @@ typedef struct{
   int currentBuilding;	
   int maxBuildings;
   botBuildLayout_t layout;
+
+  //navigation classes
+  //not for use outside C++ code
+#ifdef __cplusplus
+  class dtNavMeshQuery* navQuery;
+  class dtQueryFilter*  navFilter;
+  class dtPathCorridor* pathCorridor;
+#else
+  struct dtNavMeshQuery* navQuery;
+  struct dtQueryFilter* navFilter;
+  struct dtPathCorridor* pathCorridor;
+#endif
+
 } botMemory_t;
 
 struct gentity_s
