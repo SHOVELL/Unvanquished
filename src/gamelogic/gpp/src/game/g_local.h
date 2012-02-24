@@ -888,7 +888,10 @@ void G_BotThink(gentity_t *self);
 void G_BotSpectatorThink( gentity_t *self );
 void G_BotIntermissionThink( gclient_t *client );
 void G_BotAssignGroups(void);
-void G_BotLoadBuildLayout();//// g_cmds.c
+void G_BotLoadBuildLayout();
+
+//
+// g_cmds.c
 //
 
 #define DECOLOR_OFF '\16'
@@ -964,7 +967,8 @@ gentity_t         *G_Reactor( void );
 gentity_t         *G_Overmind( void );
 qboolean          G_FindCreep( gentity_t *self );
 gentity_t *G_Build( gentity_t *builder, buildable_t buildable,
-    const vec3_t origin, const vec3_t normal, const vec3_t angles );void              G_BuildableThink( gentity_t *ent, int msec );
+    const vec3_t origin, const vec3_t normal, const vec3_t angles );
+void              G_BuildableThink( gentity_t *ent, int msec );
 qboolean          G_BuildableRange( vec3_t origin, float r, buildable_t buildable );
 void              G_ClearDeconMarks( void );
 itemBuildError_t  G_CanBuild( gentity_t *ent, buildable_t buildable, int distance, vec3_t origin, vec3_t normal );
@@ -977,7 +981,9 @@ void              G_LayoutSave( char *name );
 int               G_LayoutList( const char *map, char *list, int len );
 void              G_LayoutSelect( void );
 void              G_LayoutLoad( void );
-void			  G_NavMeshInit( void );void			  G_NavMeshCleanup( void );void              G_BaseSelfDestruct( team_t team );
+void			  G_NavMeshInit( void );
+void			  G_NavMeshCleanup( void );
+void              G_BaseSelfDestruct( team_t team );
 int               G_NextQueueTime( int queuedBP, int totalBP, int queueBaseRate );
 void              G_QueueBuildPoints( gentity_t *self );
 int               G_GetBuildPoints( const vec3_t pos, team_t team );
