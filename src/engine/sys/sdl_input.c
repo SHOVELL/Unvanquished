@@ -48,18 +48,11 @@ Maryland 20850 USA.
 
 #define ARRAYLEN(x) (sizeof(x)/sizeof(x[0]))
 
-#ifdef MACOS_X
-// Mouse acceleration needs to be disabled
-#define MACOS_X_ACCELERATION_HACK
-// Cursor needs hack to hide
-#define MACOS_X_CURSOR_HACK
-#endif
-
 #ifdef MACOS_X_ACCELERATION_HACK
-#include <IOKit/IOTypes.h>
-#include <IOKit/hidsystem/IOHIDLib.h>
-#include <IOKit/hidsystem/IOHIDParameter.h>
-#include <IOKit/hidsystem/event_status_driver.h>
+#	include <IOKit/IOTypes.h>
+#	include <IOKit/hidsystem/IOHIDLib.h>
+#	include <IOKit/hidsystem/IOHIDParameter.h>
+#	include <IOKit/hidsystem/event_status_driver.h>
 #endif
 
 static cvar_t *in_keyboardDebug     = NULL;
@@ -505,7 +498,7 @@ static void IN_ActivateMouse( void )
 IN_DeactivateMouse
 ===============
 */
-static void IN_DeactivateMouse( void )
+void IN_DeactivateMouse( void )
 {
 	if( !SDL_WasInit( SDL_INIT_VIDEO ) )
 		return;
@@ -1280,6 +1273,11 @@ void IN_Frame( void )
 		// Window not got focus
 		IN_DeactivateMouse( );
 	}
+	else if( com_minimized->integer  )
+	{
+		// Minimized
+		IN_DeactivateMouse( );
+	}
 	else
 		IN_ActivateMouse( );
 
@@ -1287,7 +1285,7 @@ void IN_Frame( void )
 	if ( (vidRestartTime != 0) && (vidRestartTime < Sys_Milliseconds()) )
 	{
 		vidRestartTime = 0;
-		Cbuf_AddText( "vid_restart" );
+		Cbuf_AddText( "vid_restart\n" );
 	}
 }
 

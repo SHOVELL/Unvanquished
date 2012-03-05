@@ -61,7 +61,7 @@ endif()
 option( USE_MUMBLE           "Compile with support for Mumble"         1 )
 option( USE_PHYSICS	     "Compile with Newton Physics"             0 )
 option( USE_WEBP	     "Compile with WebP loader"                1 )
-option( USE_MYSQL	     "Compile with MYSQL support"              1 )
+option( USE_MYSQL	     "Compile with MYSQL support"              0 )
 option( USE_VOIP	     "Compile with VOIP support"               1 )
 option( USE_CIN_XVID	     "Encode videos with XViD"                 1 )
 
@@ -413,6 +413,7 @@ if( USE_MYSQL )
     ${MOUNT_DIR}/engine/database/db_mysql.c
   )
   find_package( MySQL REQUIRED )
+  add_definitions( -DET_MYSQL )
 else()
   set( DATABASELIST )
 endif()
@@ -1133,19 +1134,19 @@ set(GLEW_INCLUDE_DIR
     set_target_properties( gppgame PROPERTIES
       OUTPUT_NAME "qagame.mp.${BUILD_ARCH}"
       PREFIX ""
-      LIBRARY_OUTPUT_DIRECTORY "gpp" )
+      LIBRARY_OUTPUT_DIRECTORY "main" )
     add_library( gpptrem SHARED ${CGAMEGPP} )
     set_property( TARGET gpptrem PROPERTY COMPILE_DEFINITIONS CGAME CGAMEDLL GPP USE_REFENTITY_ANIMATIONSYSTEM )
     set_target_properties( gpptrem PROPERTIES
       OUTPUT_NAME "cgame.mp.${BUILD_ARCH}"
       PREFIX "" 
-      LIBRARY_OUTPUT_DIRECTORY "gpp" )
+      LIBRARY_OUTPUT_DIRECTORY "main" )
   add_library( gppui SHARED ${UIGPP} )
     set_property( TARGET gppui PROPERTY COMPILE_DEFINITIONS UI UIDLL GPP USE_REFENTITY_ANIMATIONSYSTEM )
     set_target_properties( gppui PROPERTIES
       OUTPUT_NAME "ui.mp.${BUILD_ARCH}"
       PREFIX ""
-      LIBRARY_OUTPUT_DIRECTORY "gpp" )
+      LIBRARY_OUTPUT_DIRECTORY "main" )
   endif()
 
 ###################
@@ -1215,7 +1216,7 @@ if( BUILD_OLD_RENDERER OR BUILD_NEW_RENDERER )
       set( WEBP_LIBRARY webp )
     endif( )
     target_link_libraries( renderer ${PNG_LIBRARY} ${WEBP_LIBRARY} ${SDL_LIBRARY} ${GLEW_LIBRARY} ${OPENGL_LIBRARY} ${JPEG_LIBRARY} ${FREETYPE_LIBRARY} )
-    set_target_properties( renderer PROPERTIES OUTPUT_NAME "librenderer${BUILD_ARCH}" PREFIX "" )
+    set_target_properties( renderer PROPERTIES OUTPUT_NAME "librendererGL${BUILD_ARCH}" PREFIX "" )
   endif()
 endif()
 
@@ -1406,7 +1407,7 @@ endif()
   endif( )
 
   include_directories( ${MOUNT_DIR}/libs/cpuinfo ${MOUNT_DIR}/libs/nettle ${MOUNT_DIR}/libs/gmp/include ${MOUNT_DIR}/libs/libspeex/include ${MOUNT_DIR}/libs/libspeex/libspeex ${SDL_INCLUDE_DIR} ${CURL_INCLUDE_DIR} ${XML_INCLUDE_DIR} ${CURSES_INCLUDE_DIR} ${GMP_INCLUDES} ${NEWTON_INCLUDES} )
-  target_link_libraries( server ${OS_LIBRARIES} ${SDL_LIBRARY} ${CURL_LIBRARY} ${XML_LIBRARY} ${NEWTON_LIBRARY} ${MYSQL_LIBRARY} ${CURSES_LIBRARY} ${GMP_LIBRARY} )
+  target_link_libraries( server ${OS_LIBRARIES} ${SDL_LIBRARY} ${CURL_LIBRARY} ${XML_LIBRARY} ${NEWTON_LIBRARY} ${MYSQL_LIBRARY} ${CURSES_LIBRARY} ${GMP_LIBRARY} ${MYSQL_LIBRARIES} )
   set_property( TARGET server PROPERTY COMPILE_DEFINITIONS DEDICATED BOTLIB BOTLIB_STATIC COMPAT_ET USE_CRYPTO )
   set_target_properties( server PROPERTIES OUTPUT_NAME "daemonded.${BUILD_ARCH}" PREFIX "" LINKER_LANGUAGE CXX )
   install(TARGETS server

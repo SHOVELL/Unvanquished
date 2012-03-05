@@ -27,10 +27,10 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #endif
 
 #if !SDL_VERSION_ATLEAST(1, 2, 10)
-#define SDL_GL_ACCELERATED_VISUAL 15
-#define SDL_GL_SWAP_CONTROL 16
+#	define SDL_GL_ACCELERATED_VISUAL 15
+#	define SDL_GL_SWAP_CONTROL 16
 #elif MINSDL_PATCH >= 10
-#error Code block no longer necessary, please remove
+#	error Code block no longer necessary, please remove
 #endif
 
 #ifdef SMP
@@ -46,19 +46,20 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #include <math.h>
 
 #if defined(USE_XREAL_RENDERER)
-#include "../rendererGL/tr_local.h"
+#	include "../rendererGL/tr_local.h"
 #else
-#include "../renderer/tr_local.h"
+#	include "../renderer/tr_local.h"
 #endif
+
 #include "../client/client.h"
 #include "../sys/sys_local.h"
 #include "sdl_icon.h"
 #include "SDL_syswm.h"
 
 #if defined(WIN32)
-#include <GL/wglew.h>
+#	include <GL/wglew.h>
 #else
-#include <GL/glxew.h>
+#	include <GL/glxew.h>
 #endif
 
 extern void GLimp_InitGamma(void);
@@ -446,6 +447,7 @@ typedef enum
 
 	RSERR_INVALID_FULLSCREEN,
 	RSERR_INVALID_MODE,
+	RSERR_OLD_GL,
 
 	RSERR_UNKNOWN
 } rserr_t;
@@ -456,7 +458,7 @@ static const SDL_VideoInfo *videoInfo = NULL;
 cvar_t         *r_allowResize;	// make window resizable
 cvar_t         *r_centerWindow;
 cvar_t         *r_sdlDriver;
-
+cvar_t 	       *r_minimize;
 /*
 ===============
 GLimp_Shutdown
@@ -563,90 +565,89 @@ static void GLimp_DetectAvailableModes(void)
 }
 
 #if defined(USE_XREAL_RENDERER)
-static void GLimp_InitOpenGL3xContext()
+static qboolean GLimp_InitOpenGL3xContext()
 {
 	int				retVal;
 	const char     *success[] = { "failed", "success" };
-
-	if(!r_glCoreProfile->integer)
-		return;
+	int		GLmajor, GLminor;
 
 	GLimp_GetCurrentContext();
+	sscanf( glGetString( GL_VERSION ), "%d.%d", &GLmajor, &GLminor );
 
-	// try to initialize an OpenGL 3.0 context
+	// GL_VERSION returns the highest OpenGL version supported by the driver
+	// which is also compatible with the version we requested (i.e. OpenGL 1.1).
+	// Requesting a version below that will just give us the same GL version
+	// again, so just keep the context, but pretend to the engine that we
+	// have the lower version.
+	if( r_glMajorVersion->integer && r_glMinorVersion->integer &&
+	    100 * r_glMajorVersion->integer + r_glMinorVersion->integer <=
+	    100 * GLmajor + GLminor ) {
+		GLmajor = r_glMajorVersion->integer;
+		GLminor = r_glMinorVersion->integer;
+	}
+
+	// Check if we have to create a core profile.
+	// Core profiles are not necessarily compatible, so we have
+	// to request the desired version.
 #if defined(WIN32)
-	if(WGLEW_ARB_create_context || wglewIsSupported("WGL_ARB_create_context"))
-	{
-		int				attribs[256];	// should be really enough
-		int				numAttribs;
+	if( WGLEW_ARB_create_context_profile &&
+	    (r_glCoreProfile->integer || r_glDebugProfile->integer) ) {
+		int	attribs[256];	// should be really enough
+		int	numAttribs;
 
 		memset(attribs, 0, sizeof(attribs));
 		numAttribs = 0;
 
-		attribs[numAttribs++] = WGL_CONTEXT_MAJOR_VERSION_ARB;
-		attribs[numAttribs++] = r_glMinMajorVersion->integer;
+		if( r_glMajorVersion->integer > 0 ) {
+			attribs[numAttribs++] = WGL_CONTEXT_MAJOR_VERSION_ARB;
+			attribs[numAttribs++] = r_glMajorVersion->integer;
 
-		attribs[numAttribs++] = WGL_CONTEXT_MINOR_VERSION_ARB;
-		attribs[numAttribs++] = r_glMinMinorVersion->integer;
+			attribs[numAttribs++] = WGL_CONTEXT_MINOR_VERSION_ARB;
+			attribs[numAttribs++] = r_glMinorVersion->integer;
+		}
 
+		attribs[numAttribs++] = WGL_CONTEXT_FLAGS_ARB;
+		if( r_glDebugProfile->integer ) {
+			attribs[numAttribs++] =  WGL_CONTEXT_DEBUG_BIT_ARB;
+		} else {
+			attribs[numAttribs++] =  0;
+		}
 
-		if(WGLEW_ARB_create_context_profile)
-		{
-			attribs[numAttribs++] = WGL_CONTEXT_FLAGS_ARB;
-
-#if 0
-			if(GLXEW_ARB_debug_output)
-			{
-				attribs[numAttribs++] = WGL_CONTEXT_FORWARD_COMPATIBLE_BIT_ARB |  WGL_CONTEXT_DEBUG_BIT_ARB;
-			}
-			else
-#endif
-			{
-				attribs[numAttribs++] = WGL_CONTEXT_FORWARD_COMPATIBLE_BIT_ARB;
-			}
-
-			attribs[numAttribs++] = WGL_CONTEXT_PROFILE_MASK_ARB;
+		attribs[numAttribs++] = WGL_CONTEXT_PROFILE_MASK_ARB;
+		if( r_glCoreProfile->integer ) {
 			attribs[numAttribs++] = WGL_CONTEXT_CORE_PROFILE_BIT_ARB;
+		} else {
+			attribs[numAttribs++] = WGL_CONTEXT_COMPATIBILITY_PROFILE_BIT_ARB;
 		}
 
 		// set current context to NULL
-		retVal = wglMakeCurrent(opengl_context.hDC, NULL) != 0;
-		ri.Printf(PRINT_ALL, "...wglMakeCurrent( %p, %p ): %s\n", opengl_context.hDC, NULL, success[retVal]);
+		retVal = wglMakeCurrent( opengl_context.hDC, NULL ) != 0;
+		ri.Printf( PRINT_ALL, "...wglMakeCurrent( %p, %p ): %s\n", opengl_context.hDC, NULL, success[retVal] );
 
 		// delete HGLRC
-		if(opengl_context.hGLRC)
+		if( opengl_context.hGLRC )
 		{
-			retVal = wglDeleteContext(opengl_context.hGLRC) != 0;
-			ri.Printf(PRINT_ALL, "...deleting standard GL context: %s\n", success[retVal]);
+			retVal = wglDeleteContext( opengl_context.hGLRC ) != 0;
+			ri.Printf( PRINT_ALL, "...deleting initial GL context: %s\n", success[retVal] );
 			opengl_context.hGLRC = NULL;
 		}
 
-		ri.Printf(PRINT_ALL, "...initializing OpenGL %i.%i context ", r_glMinMajorVersion->integer, r_glMinMinorVersion->integer);
+		ri.Printf( PRINT_ALL, "...initializing new OpenGL context" );
 
-		opengl_context.hGLRC = wglCreateContextAttribsARB(opengl_context.hDC, 0, attribs);
+		opengl_context.hGLRC = wglCreateContextAttribsARB( opengl_context.hDC, 0, attribs );
 		
-		if(wglMakeCurrent(opengl_context.hDC, opengl_context.hGLRC))
+		if( wglMakeCurrent(opengl_context.hDC, opengl_context.hGLRC) )
 		{
 			ri.Printf(PRINT_ALL, " done\n");
-			glConfig.driverType = GLDRV_OPENGL3;
 		}
 		else
 		{
-            ri.Printf(PRINT_ERROR, "Could not initialize OpenGL %i.%i context\n"
-								"Make sure your graphics card supports OpenGL %i.%i or newer",
-								r_glMinMajorVersion->integer, r_glMinMinorVersion->integer,
-								r_glMinMajorVersion->integer, r_glMinMinorVersion->integer);
-
-            ri.Printf(PRINT_ALL, "Trying Vanilla (GL) Renderer...\n");
-
-            ri.Cvar_Set("cl_renderer", "GL");
-            ri.Cmd_ExecuteText(EXEC_APPEND, "vid_restart");
+			ri.Printf(PRINT_WARNING, "Could not initialize requested OpenGL profile\n");
 		}
 	}
 #elif defined(__linux__)
-
-	if(GLXEW_ARB_create_context || glewIsSupported("GLX_ARB_create_context")) 
-	{
+	if( GLXEW_ARB_create_context_profile &&
+	    (r_glCoreProfile->integer || r_glDebugProfile->integer) ) {
 		int             numAttribs;
 		int             attribs[256];
 		GLXFBConfig     *FBConfig;
@@ -654,34 +655,42 @@ static void GLimp_InitOpenGL3xContext()
 		// get FBConfig XID
 		memset(attribs, 0, sizeof(attribs));
 		numAttribs = 0;
+
 		attribs[numAttribs++] = GLX_FBCONFIG_ID;
-		glXQueryContext(opengl_context.dpy, opengl_context.ctx, GLX_FBCONFIG_ID, &attribs[numAttribs++]);
-		FBConfig = glXChooseFBConfig(opengl_context.dpy, 0, attribs, &numAttribs);
+		glXQueryContext(opengl_context.dpy, opengl_context.ctx,
+				GLX_FBCONFIG_ID, &attribs[numAttribs++]);
+		FBConfig = glXChooseFBConfig(opengl_context.dpy, 0,
+					     attribs, &numAttribs);
 		
 		if( numAttribs == 0 ) {
-			ri.Error(ERR_FATAL, "Could not get FBConfig for XID %d\n", attribs[1]);
+			ri.Printf( PRINT_WARNING, "Could not get FBConfig for XID %d\n", attribs[1]);
 		}
-		
+
 		memset(attribs, 0, sizeof(attribs));
 		numAttribs = 0;
 
-		attribs[numAttribs++] = GLX_CONTEXT_MAJOR_VERSION_ARB;
-		attribs[numAttribs++] = r_glMinMajorVersion->integer;
+		if( r_glMajorVersion->integer > 0 ) {
+			attribs[numAttribs++] = GLX_CONTEXT_MAJOR_VERSION_ARB;
+			attribs[numAttribs++] = r_glMajorVersion->integer;
 
-		attribs[numAttribs++] = GLX_CONTEXT_MINOR_VERSION_ARB;
-		attribs[numAttribs++] = r_glMinMinorVersion->integer;
- 
-		if(0 && GLX_ARB_create_context_profile)
-		{
-			attribs[numAttribs++] = GLX_CONTEXT_FLAGS_ARB;
-			{
-				attribs[numAttribs++] = GLX_CONTEXT_FORWARD_COMPATIBLE_BIT_ARB;
-            }
-			
-			attribs[numAttribs++] = GLX_CONTEXT_PROFILE_MASK_ARB;
-			attribs[numAttribs++] = GLX_CONTEXT_CORE_PROFILE_BIT_ARB;
+			attribs[numAttribs++] = GLX_CONTEXT_MINOR_VERSION_ARB;
+			attribs[numAttribs++] = r_glMinorVersion->integer;
 		}
- 
+
+		attribs[numAttribs++] = GLX_CONTEXT_FLAGS_ARB;
+		if( r_glDebugProfile->integer ) {
+			attribs[numAttribs++] = GLX_CONTEXT_DEBUG_BIT_ARB;
+		} else {
+			attribs[numAttribs++] = 0;
+		}
+
+		attribs[numAttribs++] = GLX_CONTEXT_PROFILE_MASK_ARB;
+		if( r_glCoreProfile->integer ) {
+			attribs[numAttribs++] = GLX_CONTEXT_CORE_PROFILE_BIT_ARB;
+		} else {
+			attribs[numAttribs++] = GLX_CONTEXT_COMPATIBILITY_PROFILE_BIT_ARB;
+		}
+
 		// set current context to NULL
 		retVal = glXMakeCurrent(opengl_context.dpy, None, NULL) != 0;
 		ri.Printf(PRINT_ALL, "...glXMakeCurrent( %p, %p ): %s\n", opengl_context.dpy, NULL, success[retVal]);
@@ -689,35 +698,43 @@ static void GLimp_InitOpenGL3xContext()
 		// delete dpy
 		if(opengl_context.ctx)
 		{
-			glXDestroyContext(opengl_context.dpy, opengl_context.ctx);
-			retVal = (glGetError() == 0);
-			ri.Printf(PRINT_ALL, "...deleting standard GL context: %s\n", success[retVal]);
+			glXDestroyContext( opengl_context.dpy, opengl_context.ctx );
+			retVal = ( glGetError() == 0 );
+			ri.Printf( PRINT_ALL, "...deleting initial GL context: %s\n", success[retVal] );
 			opengl_context.ctx = NULL;
 		}
 
-		ri.Printf(PRINT_ALL, "...initializing OpenGL %i.%i context ", r_glMinMajorVersion->integer, r_glMinMinorVersion->integer);
+		ri.Printf( PRINT_ALL, "...initializing new OpenGL context " );
  
-		opengl_context.ctx = glXCreateContextAttribsARB(opengl_context.dpy, FBConfig[0], NULL, GL_TRUE, attribs);
+		opengl_context.ctx = glXCreateContextAttribsARB(opengl_context.dpy,
+								FBConfig[0], NULL, GL_TRUE, attribs);
 		
-		if(glXMakeCurrent(opengl_context.dpy, opengl_context.drawable, opengl_context.ctx))
+		if( glXMakeCurrent(opengl_context.dpy, opengl_context.drawable, opengl_context.ctx) )
 		{
-			ri.Printf(PRINT_ALL, " done\n");
-			glConfig.driverType = GLDRV_OPENGL3;
+			ri.Printf( PRINT_ALL, " done\n" );
 		}
 		else
 		{
-            ri.Printf(PRINT_ERROR, "Could not initialize OpenGL %i.%i context\n"
-								"Make sure your graphics card supports OpenGL %i.%i or newer",
-								r_glMinMajorVersion->integer, r_glMinMinorVersion->integer,
-								r_glMinMajorVersion->integer, r_glMinMinorVersion->integer);
-
-            ri.Printf(PRINT_ALL, "Trying Vanilla (GL) Renderer...\n");
-
-            ri.Cvar_Set("cl_renderer", "GL");
-            ri.Cmd_ExecuteText(EXEC_APPEND, "vid_restart");
+			ri.Printf( PRINT_WARNING, "Could not initialize requested OpenGL profile\n" );
 		}
 	}
 #endif
+
+	if( GLmajor < 2 ) {
+		// missing shader support, switch to 1.x renderer
+		return qfalse;
+	}
+
+	if( GLmajor < 3 || (GLmajor == 3 && GLminor < 2) ) {
+		// shaders are supported, but not all GL3.x features
+		ri.Printf(PRINT_ALL, "Using enhanced (GL3) Renderer in GL 2.x mode...\n");
+		return qtrue;
+	}
+
+	ri.Printf(PRINT_ALL, "Using enhanced (GL3) Renderer in GL 3.x mode...\n");
+	glConfig.driverType = GLDRV_OPENGL3;
+
+	return qtrue;
 }
 #endif
 
@@ -921,14 +938,14 @@ static int GLimp_SetMode(int mode, qboolean fullscreen, qboolean noborder)
 #ifdef USE_ICON
 		{
 			SDL_Surface    *icon = SDL_CreateRGBSurfaceFrom((void *)CLIENT_WINDOW_ICON.pixel_data,
-															CLIENT_WINDOW_ICON.width,
-															CLIENT_WINDOW_ICON.height,
-															CLIENT_WINDOW_ICON.bytes_per_pixel * 8,
-															CLIENT_WINDOW_ICON.bytes_per_pixel * CLIENT_WINDOW_ICON.width,
+									CLIENT_WINDOW_ICON.width,
+									CLIENT_WINDOW_ICON.height,
+									CLIENT_WINDOW_ICON.bytes_per_pixel * 8,
+									CLIENT_WINDOW_ICON.bytes_per_pixel * CLIENT_WINDOW_ICON.width,
 #ifdef Q3_LITTLE_ENDIAN
-															0x000000FF, 0x0000FF00, 0x00FF0000, 0xFF000000
+									0x000000FF, 0x0000FF00, 0x00FF0000, 0xFF000000
 #else
-															0xFF000000, 0x00FF0000, 0x0000FF00, 0x000000FF
+									0xFF000000, 0x00FF0000, 0x0000FF00, 0x000000FF
 #endif
 				);
 
@@ -967,7 +984,9 @@ static int GLimp_SetMode(int mode, qboolean fullscreen, qboolean noborder)
 	}
 
 #if defined(USE_XREAL_RENDERER)
-	GLimp_InitOpenGL3xContext();
+	if( !GLimp_InitOpenGL3xContext() ) {
+		return RSERR_OLD_GL;
+	}
 #endif
 
 	GLimp_DetectAvailableModes();
@@ -1029,6 +1048,9 @@ static qboolean GLimp_StartDriverAndSetMode(int mode, qboolean fullscreen, qbool
 			return qfalse;
 		case RSERR_INVALID_MODE:
 			ri.Printf(PRINT_ALL, "...WARNING: could not set the given mode (%d)\n", mode);
+			return qfalse;
+		case RSERR_OLD_GL:
+			ri.Printf(PRINT_ALL, "...WARNING: OpenGL too old\n");
 			return qfalse;
 		default:
 			break;
@@ -1682,7 +1704,7 @@ This routine is responsible for initializing the OS specific portions
 of OpenGL
 ===============
 */
-void GLimp_Init(void)
+qboolean GLimp_Init(void)
 {
 #if defined(IPHONE)
 	OWApplication *application = (OWApplication *)[OWApplication sharedApplication];
@@ -1718,6 +1740,7 @@ void GLimp_Init(void)
 	r_sdlDriver = ri.Cvar_Get("r_sdlDriver", "", CVAR_ROM);
 	r_allowResize = ri.Cvar_Get("r_allowResize", "0", CVAR_ARCHIVE);
 	r_centerWindow = ri.Cvar_Get("r_centerWindow", "0", CVAR_ARCHIVE);
+	r_minimize = ri.Cvar_Get("r_minimize", "0", CVAR_ARCHIVE);
 
 	if(ri.Cvar_VariableIntegerValue("com_abnormalExit"))
 	{
@@ -1780,7 +1803,8 @@ void GLimp_Init(void)
 	}
 
 	// Nothing worked, give up
-	ri.Error(ERR_FATAL, "GLimp_Init() - could not load OpenGL subsystem\n");
+	SDL_QuitSubSystem( SDL_INIT_VIDEO );
+	return qfalse;
 
   success:
 	// This values force the UI to disable driver selection
@@ -1892,6 +1916,8 @@ void GLimp_Init(void)
 	// This depends on SDL_INIT_VIDEO, hence having it here
 	ri.IN_Init();
 #endif	
+
+	return qtrue;
 }
 
 void GLimp_ReleaseGL(void) {
@@ -1918,6 +1944,27 @@ void GLimp_EndFrame(void)
 	if(Q_stricmp(r_drawBuffer->string, "GL_FRONT") != 0)
 	{
 		SDL_GL_SwapBuffers();
+	}
+
+	if( r_minimize && r_minimize->integer )
+	{
+		SDL_Surface *s         = SDL_GetVideoSurface();
+		qboolean    fullscreen = ( s && ( s->flags & SDL_FULLSCREEN ) );
+
+#ifdef MACOS_X
+		if( !fullscreen )
+		{
+			SDL_WM_IconifyWindow();
+			ri.Cvar_Set( "r_minimize", "0" );
+		}
+		else if( r_fullscreen->integer )
+		{
+			ri.Cvar_Set( "r_fullscreen", "0" );
+		}
+#else
+		SDL_WM_IconifyWindow();
+		ri.Cvar_Set( "r_minimize", "0" );
+#endif
 	}
 
 	if(r_fullscreen->modified)
@@ -1950,7 +1997,7 @@ void GLimp_EndFrame(void)
 		{
 			// SDL_WM_ToggleFullScreen didn't work, so do it the slow way
 			if(!sdlToggled)
-				ri.Cmd_ExecuteText(EXEC_APPEND, "vid_restart");
+				ri.Cmd_ExecuteText(EXEC_APPEND, "vid_restart\n");
 
 			ri.IN_Restart();
 		}

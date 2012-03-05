@@ -507,7 +507,7 @@ void Con_Init(void)
 	scr_conColorBlue = Cvar_Get ("scr_conColorBlue", "0.3", CVAR_ARCHIVE);
 	scr_conColorGreen = Cvar_Get ("scr_conColorGreen", "0.23", CVAR_ARCHIVE);
 	
-	scr_conUseOld = Cvar_Get ("scr_conUseOld", "0", CVAR_ARCHIVE);
+	scr_conUseOld = Cvar_Get ("scr_conUseOld", "0", CVAR_ARCHIVE|CVAR_LATCH);
 	
 	scr_conBarHeight = Cvar_Get ("scr_conBarHeight", "2", CVAR_ARCHIVE);
 	
@@ -1032,8 +1032,8 @@ void Con_DrawSolidConsole( float frac ) {
 		text = con.text + (row % con.totallines)*con.linewidth;
 
 		for (x=0 ; x<con.linewidth ; x++) {
-			if ( ( (text[x]>>8)&7 ) != currentColor ) {
-				currentColor = (text[x]>>8)&7;
+			if ( ( (text[x]>>8)&31 ) != currentColor ) {
+				currentColor = (text[x]>>8)&31;
 				color[0] = g_color_table[currentColor][0];
 				color[1] = g_color_table[currentColor][1];
 				color[2] = g_color_table[currentColor][2];

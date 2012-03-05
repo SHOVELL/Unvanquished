@@ -731,7 +731,7 @@ void G_admin_authlog( gentity_t *ent )
 
   G_LogPrintf( "AdminAuth: %i \"%s" S_COLOR_WHITE "\" \"%s" S_COLOR_WHITE
                "\" [%d] (%s): %s\n",
-               ent - g_entities, ent->client->pers.netname,
+               (int)(ent - g_entities), ent->client->pers.netname,
                ent->client->pers.admin->name, ent->client->pers.admin->level,
                ent->client->pers.guid, aflags );
 }
@@ -3556,13 +3556,13 @@ qboolean G_admin_register( gentity_t *ent )
   if( !ent )
     return qfalse;
 
-  if( ent->client->pers.admin )
+  if( ent->client->pers.admin && ent->client->pers.admin->level != 0 )
   {
     level = ent->client->pers.admin->level;
   }
 
   trap_SendConsoleCommand( EXEC_APPEND, va( "setlevel %d %d;",
-    ent - g_entities,
+    (int)(ent - g_entities),
     level ) );
 
   AP( va( "print \"^3register: ^7%s^7 is now a protected name\n\"",
@@ -3576,14 +3576,14 @@ qboolean G_admin_unregister( gentity_t *ent )
   if( !ent )
     return qfalse;
 
-  if( !ent->client->pers.admin )
+  if( !ent->client->pers.admin || ent->client->pers.admin->level == 0 )
   {
     ADMP( "^3unregister: ^7you do not have a protected name\n" );
     return qfalse;
   }
 
   trap_SendConsoleCommand( EXEC_APPEND, va( "setlevel %d 0;",
-    ent - g_entities ) );
+    (int)(ent - g_entities) ) );
 
   AP( va( "print \"^3unregister: ^7%s^7 is now an unprotected name\n\"",
     ent->client->pers.admin->name ) );

@@ -536,7 +536,8 @@ void Field_CharEvent( field_t *edit, int ch ) {
 		return;
 	}
 
-	if ( ch == 'c' - 'a' + 1 ) {  // ctrl-c clears the field
+	if ( ch == 'c' - 'a' + 1 ||
+	     ch == 'u' - 'a' + 1 ) {  // ctrl-c or ctrl-u clear the field
 		Field_Clear( edit );
 		return;
 	}
@@ -570,7 +571,7 @@ void Field_CharEvent( field_t *edit, int ch ) {
 	//
 	// ignore any other non printable chars
 	//
-	if ( ch < 32 ) {
+	if ( ch < 32 || ch == 0x7f ) {
 		return;
 	}
 
@@ -1189,8 +1190,8 @@ Key_Bind_f
 ===================
 */
 void Key_Bind_f( void ) {
-	int i, c, b;
-	char cmd[1024];
+	int q, i, c, b;
+	char *cmd;
 
 	c = Cmd_Argc();
 
@@ -1213,13 +1214,38 @@ void Key_Bind_f( void ) {
 		return;
 	}
 
-// copy the rest of the command line
-	cmd[0] = 0;     // start out with a null string
-	for ( i = 2 ; i < c ; i++ )
+	cmd = Cmd_Cmd () - 1;
+	// find the 3rd parameter
+	i = q = 0;
+	c = 2;
+	while (c && *++cmd)
 	{
-		strcat( cmd, Cmd_Argv( i ) );
-		if ( i != ( c - 1 ) ) {
-			strcat( cmd, " " );
+		if (!q && *cmd == ' ')
+			i = 1; // space found outside quotation marks
+		if (i && *cmd != ' ')
+		{
+			i = 0; // non-space found after space outside quotation marks
+			--c; // one word fewer to scan
+		}
+		if (*cmd == '"')
+			q = !q; // found a quotation mark
+	}
+
+	if (*cmd == '"')
+    {
+		// See if this matches /^".*" *$/; if so, strip quotation marks
+		c = 0;
+		while (cmd[++c])
+			if (cmd[c] == '"')
+				break;
+		i = c;
+		if (cmd[c])
+			while (cmd[++c] == ' ')
+				/**/;
+		if (!cmd[c])
+		{
+			cmd[i] = 0;
+			++cmd;
 		}
 	}
 
@@ -1240,7 +1266,11 @@ void Key_WriteBindings( fileHandle_t f ) {
 
 	for (i=0 ; i<MAX_KEYS ; i++) {
 		if ( keys[i].binding && keys[i].binding[0] ) {
-			FS_Printf (f, "bind %s \"%s\"\n", Key_KeynumToString(i), keys[i].binding );
+			// quote the string if it contains ; but no "
+			if (strchr (keys[i].binding, ';') && !strchr (keys[i].binding, '"'))
+				FS_Printf (f, "bind %s \"%s\"\n", Key_KeynumToString(i), keys[i].binding );
+			else
+				FS_Printf (f, "bind %s %s\n", Key_KeynumToString(i), keys[i].binding );
 
 		}
 
@@ -1259,7 +1289,7 @@ void Key_Bindlist_f( void ) {
 
 	for ( i = 0 ; i < MAX_KEYS ; i++ ) {
 		if ( keys[i].binding && keys[i].binding[0] ) {
-			Com_Printf( "%s \"%s\"\n", Key_KeynumToString(i), keys[i].binding );
+			Com_Printf( "%s = %s\n", Key_KeynumToString(i), keys[i].binding );
 		}
 	}
 }
@@ -1406,19 +1436,35 @@ void CL_KeyEvent( int key, qboolean down, unsigned time ) {
 	}
 
 #ifdef MACOS_X
-	if ( down && keys[ K_COMMAND ].down ) {
-		
-		if ( key == 'f' ) {
+	if ( down && keys[ K_COMMAND ].down )
+	{
+		if ( key == 'f' )
+		{
 			Key_ClearStates();
 			Cbuf_ExecuteText( EXEC_APPEND, "toggle r_fullscreen\nvid_restart\n" );
 			return;
-		} else if ( key == 'q' ) {
+		}
+		else if ( key == 'q' )
+		{
 			Key_ClearStates();
 			Cbuf_ExecuteText( EXEC_APPEND, "quit\n" );
 			return;
 		}
+		else if ( key == K_TAB )
+		{
+			Key_ClearStates();
+			Cvar_SetValue( "r_minimize", 1 );
+			return;
+		}
 	}
 #endif
+
+	if( cl_altTab->integer && keys[K_ALT].down && key == K_TAB )
+	{
+		Key_ClearStates();
+		Cvar_SetValue( "r_minimize", 1 );
+		return;
+	}
 
 	// console key is hardcoded, so the user can never unbind it
 	if( key == K_CONSOLE || ( keys[K_SHIFT].down && key == K_ESCAPE ) ) {
@@ -1602,9 +1648,6 @@ void CL_CharEvent( int key ) {
 	// fretn - this should be fixed in Com_EventLoop
 	// but I can't be arsed to leave this as is
 
-	if ( key == (unsigned char) '`' || key == (unsigned char) '~' || key == (unsigned char) '¬' ) {
-		return;
-	}
 
 	// distribute the key down event to the apropriate handler
 	if ( cls.keyCatchers & KEYCATCH_CONSOLE ) {

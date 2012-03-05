@@ -181,6 +181,10 @@ struct rsa_private_key private_key;
 #endif
 
 cvar_t         *cl_gamename;
+cvar_t	       *cl_altTab;
+
+static cvar_t  *cl_renderer = NULL;
+static void    *rendererLib = NULL;
 
 // XreaL BEGIN
 cvar_t         *cl_aviMotionJpeg;
@@ -2467,9 +2471,6 @@ void CL_Vid_Restart_f(void)
 	CL_InitOpenGLExt();
 #endif
 
-	// initialize the renderer interface
-	CL_InitRef();
-	
 	// startup all the client stuff
 	CL_StartHunkUsers();
 
@@ -3015,7 +3016,7 @@ void CL_CheckForResend(void)
 			// EVEN BALANCE - T.RAY
 			strcpy(pkt, "getchallenge");
 			pktlen = strlen(pkt);
-			NET_OutOfBandPrint(NS_CLIENT, clc.serverAddress, pkt);
+			NET_OutOfBandPrint(NS_CLIENT, clc.serverAddress, "%s", pkt);
 			break;
 
 		case CA_CHALLENGING:
@@ -4098,7 +4099,7 @@ CL_RefPrintf
 DLL glue
 ================
 */
-void QDECL CL_RefPrintf(int print_level, const char *fmt, ...)
+void QDECL __attribute__((format(printf, 2, 3))) CL_RefPrintf(int print_level, const char *fmt, ...)
 {
 	va_list         argptr;
 	char            msg[MAXPRINTMSG];
@@ -4130,18 +4131,18 @@ void QDECL CL_RefPrintf(int print_level, const char *fmt, ...)
 CL_InitRenderer
 ============
 */
-void CL_InitRenderer(void)
+qboolean CL_InitRenderer(void)
 {
 	fileHandle_t f;
 	// this sets up the renderer and calls R_Init
-	re.BeginRegistration(&cls.glconfig, &cls.glconfig2);
+	if( !re.BeginRegistration(&cls.glconfig, &cls.glconfig2) ) {
+		
+		return qfalse;
+	}
 
 	// load character sets
-	cls.charSetShader = re.RegisterShader("gfx/2d/consolechars");
-
+	cls.charSetShader = re.RegisterShader("gfx/2d/bigchars");
 	cls.useLegacyConsoleFont = qtrue;
-
-
 
     // Register console font specified by cl_consoleFont, if any
     // filehandle is unused but forces FS_FOpenFileRead() to heed purecheck because it does not when filehandle is NULL 
@@ -4154,11 +4155,8 @@ void CL_InitRenderer(void)
 	}
 
 	cls.whiteShader = re.RegisterShader("white");
-
-// JPW NERVE
-
-	cls.consoleShader = re.RegisterShader( "console-16bit" ); // JPW NERVE shader works with 16bit
-	cls.consoleShader2 = re.RegisterShader( "console2-16bit" ); // JPW NERVE same
+	cls.consoleShader = re.RegisterShader( "console" );
+	cls.consoleShader2 = re.RegisterShader( "console2" );
 
 	g_console_field_width = cls.glconfig.vidWidth / SMALLCHAR_WIDTH - 2;
 	g_consoleField.widthInChars = g_console_field_width;
@@ -4171,6 +4169,8 @@ void CL_InitRenderer(void)
 				, cls.glconfig.renderer_string
 				, cls.glconfig.version_string );
 #endif
+
+	return qtrue;
 }
 
 /*
@@ -4193,10 +4193,28 @@ void CL_StartHunkUsers(void)
 		return;
 	}
 
-	if(!cls.rendererStarted)
-	{
-		cls.rendererStarted = qtrue;
-		CL_InitRenderer();
+	if( rendererLib == NULL ) {
+		// initialize the renderer interface
+		char renderers[MAX_QPATH];
+		char *from, *to;
+
+		Q_strncpyz( renderers, cl_renderer->string, sizeof(renderers) );
+		from = renderers;
+		while( from ) {
+			to = strchr(from, ',');
+			if( to )
+				*to++ = '\0';
+			CL_InitRef( from );
+			if( CL_InitRenderer() ) {
+				cls.rendererStarted = qtrue;
+				break;
+			}
+			CL_ShutdownRef();
+			from = to;
+		}
+	} else if(!cls.rendererStarted) {
+		if( CL_InitRenderer() )
+			cls.rendererStarted = qtrue;
 	}
 
 	if(!cls.soundStarted)
@@ -4419,9 +4437,6 @@ int CL_ScaledMilliseconds(void)
 
 
 
-static cvar_t  *cl_renderer = NULL;
-static void    *rendererLib = NULL;
-
 #if defined(REF_HARD_LINKED)
 extern refexport_t* GetRefAPI(int apiVersion, refimport_t * rimp);
 #endif
@@ -4433,7 +4448,7 @@ CL_InitRef
 RB: changed to load the renderer from a .dll
 ============
 */
-void CL_InitRef(void)
+void CL_InitRef(const char *renderer)
 {
 	refimport_t     ri;
 	refexport_t    *ret;
@@ -4445,11 +4460,9 @@ void CL_InitRef(void)
 
 	Com_Printf("----- Initializing Renderer ----\n");
 
-	cl_renderer = Cvar_Get("cl_renderer", "GL3", CVAR_ARCHIVE | CVAR_LATCH);
-
 #if !defined(REF_HARD_LINKED)
 
-	Com_sprintf(dllName, sizeof(dllName), DLL_PREFIX "renderer%s" ARCH_STRING DLL_EXT, cl_renderer->string);
+	Com_sprintf(dllName, sizeof(dllName), DLL_PREFIX "renderer%s" ARCH_STRING DLL_EXT, renderer);
 
 	Com_Printf("Loading \"%s\"...", dllName);
 	if((rendererLib = Sys_LoadLibrary(dllName)) == 0)
@@ -4901,6 +4914,8 @@ void CL_Init(void)
 	//
 	// register our variables
 	//
+	cl_renderer = Cvar_Get("cl_renderer", "GL3,GL", CVAR_ARCHIVE|CVAR_LATCH);
+
 	cl_noprint = Cvar_Get("cl_noprint", "0", 0);
 	cl_motd = Cvar_Get("cl_motd", "1", 0);
 	cl_autoupdate = Cvar_Get("cl_autoupdate", "1", CVAR_ARCHIVE);
@@ -4935,7 +4950,7 @@ void CL_Init(void)
 	cl_pitchspeed = Cvar_Get("cl_pitchspeed", "140", CVAR_ARCHIVE);
 	cl_anglespeedkey = Cvar_Get("cl_anglespeedkey", "1.5", 0);
 
-	cl_maxpackets = Cvar_Get("cl_maxpackets", "30", CVAR_ARCHIVE);
+	cl_maxpackets = Cvar_Get("cl_maxpackets", "125", CVAR_ARCHIVE);
 	cl_packetdup = Cvar_Get("cl_packetdup", "1", CVAR_ARCHIVE);
 
 	cl_run = Cvar_Get("cl_run", "1", CVAR_ARCHIVE);
@@ -4976,7 +4991,7 @@ void CL_Init(void)
 
 	cl_bypassMouseInput = Cvar_Get("cl_bypassMouseInput", "0", 0);	//CVAR_ROM );          // NERVE - SMF
 
-	cl_doubletapdelay = Cvar_Get("cl_doubletapdelay", "350", CVAR_ARCHIVE);	// Arnout: double tap
+	cl_doubletapdelay = Cvar_Get("cl_doubletapdelay", "100", CVAR_ARCHIVE);	// Arnout: double tap
 
 #if defined (USE_HTTP)
 	// Initialize ui_logged_in to -1(not logged in)
@@ -5014,6 +5029,7 @@ void CL_Init(void)
 	cl_consolePrompt = Cvar_Get ("cl_consolePrompt", "^3->", CVAR_ARCHIVE);
 
 	cl_gamename = Cvar_Get("cl_gamename", GAMENAME_FOR_MASTER, CVAR_TEMP);
+	cl_altTab = Cvar_Get ("cl_altTab", "1", CVAR_ARCHIVE);
 
 	//bani - make these cvars visible to cgame
 	cl_demorecording = Cvar_Get("cl_demorecording", "0", CVAR_ROM);
@@ -5058,7 +5074,7 @@ void CL_Init(void)
 	// userinfo
 	Cvar_Get("name", "UnnamedPlayer", CVAR_USERINFO | CVAR_ARCHIVE);
 	Cvar_Get("rate", "25000", CVAR_USERINFO | CVAR_ARCHIVE);	// Dushan - changed from 5000
-	Cvar_Get("snaps", "20", CVAR_USERINFO | CVAR_ARCHIVE);
+	Cvar_Get("snaps", "40", CVAR_USERINFO | CVAR_ARCHIVE);
 //  Cvar_Get ("model", "american", CVAR_USERINFO | CVAR_ARCHIVE );  // temp until we have an skeletal american model
 //  Arnout - no need // Cvar_Get ("model", "multi", CVAR_USERINFO | CVAR_ARCHIVE );
 //  Arnout - no need // Cvar_Get ("head", "default", CVAR_USERINFO | CVAR_ARCHIVE );
@@ -5220,8 +5236,6 @@ void CL_Init(void)
 	// Dushan
 	CL_InitOpenGLExt();
 #endif
-
-	CL_InitRef();
 
 	SCR_Init();
 
