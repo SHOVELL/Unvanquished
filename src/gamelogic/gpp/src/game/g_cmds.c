@@ -2977,7 +2977,9 @@ void Cmd_ListMaps_f( gentity_t *ent )
   int  pages;
   int  row, rows;
   int  start, i, j;
+  char mapName[MAX_QPATH];
 
+  trap_Cvar_VariableStringBuffer("mapname", mapName, sizeof(mapName));
   if( trap_Argc( ) > 1 )
   {
     trap_Argv( 1, search, sizeof( search ) );
@@ -3035,7 +3037,11 @@ void Cmd_ListMaps_f( gentity_t *ent )
   {
     for( i = start + row, j = 0; i < count && j < 3; i += rows, j++ )
     {
-      ADMBP( va( "^7 %-20s", fileSort[ i ] ) );
+      if(!strcmp( fileSort[ i ], mapName)) {
+        ADMBP( va( "^3 %-20s", fileSort[ i ] ) );
+      } else {
+        ADMBP( va( "^7 %-20s", fileSort[ i ] ) );
+      }
       shown++;
     }
     ADMBP( "\n" );
@@ -3191,6 +3197,7 @@ commands_t cmds[ ] = {
   { "itemtoggle", CMD_HUMAN|CMD_LIVING, Cmd_ToggleItem_f },
   { "kill", CMD_TEAM|CMD_LIVING, Cmd_Kill_f },
   { "listmaps", CMD_MESSAGE|CMD_INTERMISSION, Cmd_ListMaps_f },
+  { "listrotation", CMD_MESSAGE|CMD_INTERMISSION, G_PrintCurrentRotation },
   { "m", CMD_MESSAGE|CMD_INTERMISSION, Cmd_PrivateMessage_f },
   { "mt", CMD_MESSAGE|CMD_INTERMISSION, Cmd_PrivateMessage_f },
   { "noclip", CMD_CHEAT_TEAM, Cmd_Noclip_f },

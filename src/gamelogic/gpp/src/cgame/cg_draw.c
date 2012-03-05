@@ -2094,8 +2094,8 @@ static void CG_DrawClock( rectDef_t *rect, float text_x, float text_y,
 {
   char    *s;
   float   tx, ty;
-  int     i, strLength;
-  float   w, h, totalWidth;
+  int     i;
+  float   w, h, maxX;
   qtime_t qt;
   int     t;
 
@@ -2126,22 +2126,16 @@ static void CG_DrawClock( rectDef_t *rect, float text_x, float text_y,
 
     s = va( "%d%s%02d%s", h, ( qt.tm_sec % 2 ) ? ":" : " ", qt.tm_min, pm );
   }
-  w = UI_Text_Width( "0", scale );
-  h = UI_Text_Height( "0", scale );
-  strLength = CG_DrawStrlen( s );
-  totalWidth = w * strLength;
-
-  CG_AlignText( rect, s, 0.0f, totalWidth, h, textalign, textvalign, &tx, &ty );
-
-  for( i = 0; i < strLength; i++ )
+  if( UI_Text_Width( s, scale ) < rect->w )
   {
-    char c[ 2 ];
-
-    c[ 0 ] = s[ i ];
-    c[ 1 ] = '\0';
-
-    UI_Text_Paint( text_x + tx + i * w, text_y + ty, scale, color, c, 0, 0, textStyle );
+    CG_AlignText( rect, s, scale, 0, 0, textalign, textvalign, &tx, &ty );
+    UI_Text_Paint( tx, ty, scale, color, s, 0, 0, textStyle );
   }
+  else
+  {
+    CG_AlignText( rect, s, scale, 0, 0, textalign, textvalign, &tx, &ty );
+    UI_Text_Paint_Limit( &maxX, tx, ty, scale, color, s, 0, 0 );
+  } 
 }
 
 /*
@@ -3725,7 +3719,7 @@ static void CG_DrawVote( team_t team )
   UI_Text_Paint( 8, 320 + offset, 0.3f, white, s, 0, 0,
     ITEM_TEXTSTYLE_NORMAL );
 
-  s = va( "  [check]%sYes:%i %s[cross]No:%i",
+  s = va( "  %s[check]:%i %s[cross]:%i",
     yeskey, cgs.voteYes[ team ], nokey, cgs.voteNo[ team ] );
 
   UI_Text_Paint( 8, 340 + offset, 0.3f, white, s, 0, 0,
@@ -3797,7 +3791,7 @@ static void CG_DrawIntermission( void )
   cg.scoreFadeTime = cg.time;
   cg.scoreBoardShowing = CG_DrawScoreboard( );
 }
-
+#if 0
 /*
 ==============
 CG_DrawPainView
@@ -3890,7 +3884,7 @@ static void CG_DrawPainView(void)
 		CG_DrawPic( 0, 0, 640, 480, painview );
 	}	
 }
-
+#endif
 
 /*
 =================
@@ -3997,7 +3991,7 @@ static void CG_Draw2D( void )
 {
   menuDef_t *menu = NULL;
   
-  CG_DrawPainView();
+//   CG_DrawPainView();
 
   // fading to black if stamina runs out
   // (only 2D that can't be disabled)

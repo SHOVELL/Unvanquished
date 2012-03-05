@@ -149,6 +149,8 @@ vmCvar_t  g_censorship;
 
 vmCvar_t  g_tag;
 
+vmCvar_t  g_showKillerHP;
+
 // <bot stuff>
 
 // bot buy cvars
@@ -295,11 +297,11 @@ static cvarTable_t   gameCvarTable[ ] =
   { &g_markDeconstruct, "g_markDeconstruct", "3", CVAR_SERVERINFO | CVAR_ARCHIVE, 0, qtrue  },
 
   { &g_debugMapRotation, "g_debugMapRotation", "0", 0, 0, qfalse  },
-  { &g_currentMapRotation, "g_currentMapRotation", "-1", 0, 0, qfalse  }, // -1 = NOT_ROTATING
+  { &g_currentMapRotation, "g_currentMapRotation", "0", 0, 0, qfalse  }, // -1 = NOT_ROTATING
   { &g_mapRotationNodes, "g_mapRotationNodes", "", CVAR_ROM, 0, qfalse  },
   { &g_mapRotationStack, "g_mapRotationStack", "", CVAR_ROM, 0, qfalse  },
   { &g_nextMap, "g_nextMap", "", 0 , 0, qtrue  },
-  { &g_initialMapRotation, "g_initialMapRotation", "", CVAR_ARCHIVE, 0, qfalse  },
+  { &g_initialMapRotation, "g_initialMapRotation", "rotation1", CVAR_ARCHIVE, 0, qfalse  },
   { &g_debugVoices, "g_debugVoices", "0", 0, 0, qfalse  },
   { &g_voiceChats, "g_voiceChats", "1", CVAR_ARCHIVE, 0, qfalse },
   { &g_shove, "g_shove", "0.0", CVAR_ARCHIVE, 0, qfalse  },
@@ -307,7 +309,7 @@ static cvarTable_t   gameCvarTable[ ] =
   { NULL, "g_mapConfigsLoaded", "0", CVAR_ROM, 0, qfalse  },
 
   { &g_layouts, "g_layouts", "", CVAR_LATCH, 0, qfalse  },
-  { &g_layoutAuto, "g_layoutAuto", "1", CVAR_ARCHIVE, 0, qfalse  },
+  { &g_layoutAuto, "g_layoutAuto", "0", CVAR_ARCHIVE, 0, qfalse  },
 
   { &g_emoticonsAllowedInNames, "g_emoticonsAllowedInNames", "1", CVAR_LATCH|CVAR_ARCHIVE, 0, qfalse  },
 
@@ -324,7 +326,10 @@ static cvarTable_t   gameCvarTable[ ] =
   { &g_censorship, "g_censorship", "", CVAR_ARCHIVE, 0, qfalse  },
 
   { &g_tag, "g_tag", "gpp", CVAR_INIT, 0, qfalse },
-  
+  { &g_tag, "g_tag", "gpp", CVAR_INIT, 0, qfalse },
+
+  { &g_showKillerHP, "g_showKillerHP", "0", CVAR_ARCHIVE, 0, qfalse  }
+
   // <bot stuff>
   // bot buy cvars
   { &g_bot_buy, "g_bot_buy", "1", CVAR_ARCHIVE | CVAR_NORESTART, 0, qfalse },

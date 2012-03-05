@@ -1238,7 +1238,7 @@ void G_WriteSessionData( void );
 // g_maprotation.c
 //
 void      G_PrintRotations( void );
-void      G_PrintCurrentRotation( gentity_t *ent, const char *command );
+void      G_PrintCurrentRotation( gentity_t *ent );
 void      G_AdvanceMapRotation( int depth );
 qboolean  G_StartMapRotation( char *name, qboolean advance,
                               qboolean putOnStack, qboolean reset_index, int depth );
@@ -1370,6 +1370,8 @@ extern  vmCvar_t  g_publicAdminMessages;
 extern  vmCvar_t  g_allowTeamOverlay;
 
 extern  vmCvar_t  g_censorship;
+
+extern  vmCvar_t  g_showKillerHP;
 
 // <bot stuff>
 // bot buy cvars

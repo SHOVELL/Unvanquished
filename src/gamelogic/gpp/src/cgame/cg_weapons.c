@@ -499,7 +499,8 @@ static qboolean CG_ParseWeaponFile( const char *filename, weaponInfo_t *wi )
   trap_FS_Read( text, len, f );
   text[ len ] = 0;
   trap_FS_FCloseFile( f );
-
+  for( i=0;i<3;i++ )
+    wi->scale[i] = 1.0;
   // parse the text
   text_p = text;
 
@@ -856,7 +857,7 @@ static void CG_WeaponAnimation( centity_t *cent, int *old, int *now, float *back
   entityState_t *es = &cent->currentState;
 
   // see if the animation sequence is switching
-  if( es->weaponAnim != lf->animationNumber || !lf->animation )
+  if( es->weaponAnim != lf->animationNumber || !lf->animation || (lf->animation && !lf->animation->handle))
     CG_SetWeaponLerpFrameAnimation( es->weapon, lf, es->weaponAnim );
 
   CG_RunLerpFrame( lf, 1.0f );
