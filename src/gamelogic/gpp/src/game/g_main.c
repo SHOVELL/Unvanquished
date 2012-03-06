@@ -328,7 +328,7 @@ static cvarTable_t   gameCvarTable[ ] =
   { &g_tag, "g_tag", "gpp", CVAR_INIT, 0, qfalse },
   { &g_tag, "g_tag", "gpp", CVAR_INIT, 0, qfalse },
 
-  { &g_showKillerHP, "g_showKillerHP", "0", CVAR_ARCHIVE, 0, qfalse  }
+  { &g_showKillerHP, "g_showKillerHP", "0", CVAR_ARCHIVE, 0, qfalse  },
 
   // <bot stuff>
   // bot buy cvars
